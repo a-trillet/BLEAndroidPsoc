@@ -37,7 +37,6 @@ import java.util.UUID;
 /**
  * Service for managing the BLE data connection with the GATT database.
  */
-@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 // This is required to allow us to use the lollipop and later scan APIs
 public class PSoCconnection extends Service {
     private final static String TAG = PSoCconnection.class.getSimpleName();
@@ -52,15 +51,17 @@ public class PSoCconnection extends Service {
     // Bluetooth characteristics that we need to read/write
     private static BluetoothGattCharacteristic mred_led_onCharacterisitc;
     private static BluetoothGattCharacteristic mred_led_toggleCharacteristic;
+    private static BluetoothGattCharacteristic mcounterCharacteristic;
     private static BluetoothGattDescriptor mCapSenseCccd;
 
     // UUIDs for the service and characteristics that the custom CapSenseLED service uses
-    private final static String baseUUID = "9193F0D7-4394-4AE6-B8A2-6DAD65947120";
+    private final static String baseUUID = "9193f0d7-4394-4ae6-b8a2-6dad6594712";
     private final static String dev_intUUID = baseUUID + "0";
     public final static String red_led_onCharacteristicUUID = baseUUID + "1";
     public final static String red_led_toggleCharacteristicUUID = baseUUID + "2";
     public final static String counterCharacteristicUUID = baseUUID + "3";
     private final static String CccdUUID = "00002902-0000-1000-8000-00805f9b34fb";
+
 
 
     // Variables to keep track of the LED switch state and CapSense Value
@@ -78,10 +79,6 @@ public class PSoCconnection extends Service {
             "com.example.myble.ACTION_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_RECEIVED =
             "com.example.myble.ACTION_DATA_RECEIVED";
-
-
-
-
 
 
     public PSoCconnection() {
@@ -136,37 +133,72 @@ public class PSoCconnection extends Service {
         return true;
     }
 
+
+    public boolean hasPermission(String permissionType) {
+        return (ActivityCompat.checkSelfPermission(this, permissionType)
+                == PackageManager.PERMISSION_GRANTED);
+    }
+
+    public boolean hasRequiredRuntimePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
+                    hasPermission(Manifest.permission.BLUETOOTH_CONNECT);
+        } else {
+            return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
+
+    public void scan2() {
+        Log.d(TAG, "scanning1");
+        UUID capsenseLedService = UUID.fromString(dev_intUUID);
+        UUID[] capsenseLedServiceArray = {capsenseLedService};
+
+        // New BLE scanning introduced in LOLLIPOP
+        ScanSettings settings;
+        List<ScanFilter> filters;
+        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        settings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+                .build();
+        filters = new ArrayList<>();
+        // We will scan just for the CAR's UUID
+        ParcelUuid PUuid = new ParcelUuid(capsenseLedService);
+        ScanFilter filter = new ScanFilter.Builder().setServiceUuid(PUuid).build();
+        filters.add(filter);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "required runtime permission not granted");
+            return;
+        }
+        mLEScanner.startScan(null, settings, mScanCallback);
+    }
     /**
      * Scans for BLE devices that support the service we are looking for
      */
     public void scan() {
-        /* Scan for devices and look for the one with the service that we want */
+        Log.d(TAG, "scanning");
         UUID capsenseLedService = UUID.fromString(dev_intUUID);
         UUID[] capsenseLedServiceArray = {capsenseLedService};
 
-        // Use old scan method for versions older than lollipop
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            //noinspection deprecation
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+        // New BLE scanning introduced in LOLLIPOP
+        ScanSettings settings;
+        List<ScanFilter> filters;
+        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        settings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build();
+        filters = new ArrayList<>();
+        // We will scan just for the CAR's UUID
+        ParcelUuid PUuid = new ParcelUuid(capsenseLedService);
+        ScanFilter filter = new ScanFilter.Builder().setServiceUuid(PUuid).build();
+        filters.add(filter);
 
-                return;
-            }
-            mBluetoothAdapter.startLeScan(capsenseLedServiceArray, mLeScanCallback);
-        } else { // New BLE scanning introduced in LOLLIPOP
-            ScanSettings settings;
-            List<ScanFilter> filters;
-            mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
-            settings = new ScanSettings.Builder()
-                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                    .build();
-            filters = new ArrayList<>();
-            // We will scan just for the CAR's UUID
-            ParcelUuid PUuid = new ParcelUuid(capsenseLedService);
-            ScanFilter filter = new ScanFilter.Builder().setServiceUuid(PUuid).build();
-            filters.add(filter);
-            mLEScanner.startScan(filters, settings, mScanCallback);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "required runtime permission not granted");
+            return;
         }
-    }
+        mLEScanner.startScan(filters, settings, mScanCallback);
+        }
 
     /**
      * Connects to the GATT server hosted on the Bluetooth LE device.
@@ -389,11 +421,13 @@ public class PSoCconnection extends Service {
      * <p>
      * This is the callback for BLE scanning for LOLLIPOP and later
      */
+
     private final ScanCallback mScanCallback = new ScanCallback() {
         @SuppressLint("MissingPermission")
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             mLeDevice = result.getDevice();
+            Log.i(TAG, "device found : " + mLeDevice.getName() );
 
             mLEScanner.stopScan(mScanCallback); // Stop scanning after the first device is found
             broadcastUpdate(ACTION_BLESCAN_CALLBACK); // Tell the main activity that a device has been found

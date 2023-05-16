@@ -23,6 +23,7 @@ import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -62,8 +63,11 @@ public class MainActivity extends AppCompatActivity {
     //This is required for Android 6.0 (Marshmallow)
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BLUETOOTH_CONNECT = 1;
-    private static final int PERMISSION_REQUEST_BLUETOOTH_SCAN = 1;
+    private static final int PERMISSION_REQUEST_BLUETOOTH_SCAN = 2;
 
+
+    private static final int REQUEST_BLUETOOTH_PERMISSIONS = 1;
+    private static final int REQUEST_APP_SETTINGS = 2;
 
     // Keep track of whether CapSense Notifications are on or off
     private static boolean CapSenseNotifyState = false;
@@ -139,52 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-        /*//This section required for Android 6.0 (Marshmallow)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Android M Permission check 
-            if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("This app needs location access ");
-                builder.setMessage("Please grant location access so this app can detect devices.");
-                builder.setPositiveButton(android.R.string.ok, null);
-                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                    public void onDismiss(DialogInterface dialog) {
-                        requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
-                    }
-                });
 
-                builder.show();
-            }
-            if (this.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("This app needs bluetooth scan ");
-                builder.setMessage("Please grant bluetooth scan so this app can detect devices.");
-                builder.setPositiveButton(android.R.string.ok, null);
-                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                    @RequiresApi(api = Build.VERSION_CODES.S)
-                    public void onDismiss(DialogInterface dialog) {
-                        requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN}, PERMISSION_REQUEST_BLUETOOTH_SCAN);
-                    }
-                });
-
-                builder.show();
-            }
-            if (this.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("This app needs bluetooth scan ");
-                builder.setMessage("Please grant bluetooth scan so this app can detect devices.");
-                builder.setPositiveButton(android.R.string.ok, null);
-                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                    @RequiresApi(api = Build.VERSION_CODES.S)
-                    public void onDismiss(DialogInterface dialog) {
-                        requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_REQUEST_BLUETOOTH_CONNECT);
-                    }
-                });
-
-                builder.show();
-            }
-
-        } //End of section for Android 6.0 (Marshmallow)*/
 
         /* This will be called when the LED On/Off switch is touched */
         led_switch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -209,29 +168,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-   /* //This method required for Android 6.0 (Marshmallow)
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case PERMISSION_REQUEST_COARSE_LOCATION: {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.d("Permission for 6.0:", "Coarse location permission granted");
-                } else {
-                    final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                    builder.setTitle("Functionality limited");
-                    builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons when in the background.");
-                    builder.setPositiveButton(android.R.string.ok, null);
-                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                        }
-                    });
-                    builder.show();
-                }
-            }
-        }
-    } //End of section for Android 6.0 (Marshmallow)*/
+
 
     @Override
     protected void onResume() {
@@ -281,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
     private void promptEnableBluetooth() {
         if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            if (hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
+            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
                 Log.d(TAG, "BLUETOOTH_CONNECT permission not granted");
                 return;
             }
@@ -290,12 +227,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean hasPermission(String permissionType){
-        return (ActivityCompat.checkSelfPermission(this, permissionType)
-                    != PackageManager.PERMISSION_GRANTED);
+        return (ContextCompat.checkSelfPermission(MainActivity.this, permissionType)
+                    == PackageManager.PERMISSION_GRANTED);
     }
 
     public boolean hasRequiredRuntimePermissions(){
+        requestLocationPermission();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Log.i(TAG, " scan permission " + hasPermission(Manifest.permission.BLUETOOTH_SCAN) );
+            Log.i(TAG, "connect permission " + hasPermission(Manifest.permission.BLUETOOTH_CONNECT) );
+            Log.i(TAG, "location permission " + hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) );
+            Log.i(TAG, "location coarse permission " + hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION) );
+            Log.i(TAG, "bluetooth permission " + hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) );
+            Log.i(TAG, "bluetooth admin permission " + hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION) );
         return hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
                     hasPermission(Manifest.permission.BLUETOOTH_CONNECT);
         }
@@ -303,6 +247,89 @@ public class MainActivity extends AppCompatActivity {
             return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION);
         }
     }
+    public void requestRelevantRuntimePermissions(){
+        if (!hasRequiredRuntimePermissions()) {
+            //if(Build.VERSION.SDK_INT < Build.VERSION_CODES.S){
+                requestLocationPermission();
+            //}
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                requestBluetoothPermissions();
+            }
+        }
+    }
+
+    public void requestLocationPermission() {
+        if (!hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)){
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);}
+        if (!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)){
+        ActivityCompat.requestPermissions(MainActivity.this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);}
+    }
+
+
+
+
+    @RequiresApi(api = Build.VERSION_CODES.S)
+    private static final String[] ANDROID_12_BLE_PERMISSIONS = new String[]{
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT };
+    @RequiresApi(api = Build.VERSION_CODES.S)
+    public void requestBluetoothPermissions() {
+
+        if(!hasPermission(Manifest.permission.BLUETOOTH_SCAN)){
+            Log.w(TAG, "requesting BLUETOOTH permission scan");
+
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("This app needs bluetooth scan ");
+            builder.setMessage("Please grant bluetooth scan so this app can detect devices.");
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @RequiresApi(api = Build.VERSION_CODES.S)
+                public void onDismiss(DialogInterface dialog) {
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.BLUETOOTH_SCAN}, PERMISSION_REQUEST_BLUETOOTH_SCAN);
+                }
+            });
+        builder.show();
+
+        }
+        if(!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)){
+            Log.w(TAG, "requesting BLUETOOTH permission connect");
+
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("This app needs bluetooth connect ");
+            builder.setMessage("Please grant bluetooth connect so this app can detect devices.");
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @RequiresApi(api = Build.VERSION_CODES.S)
+                public void onDismiss(DialogInterface dialog) {
+                    requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_REQUEST_BLUETOOTH_CONNECT);
+                }
+            });
+            builder.show();
+
+        }
+        if(!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)){
+            Log.w(TAG, "requesting location permission");
+
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("This app needs location for bluetooth connect ");
+            builder.setMessage("Please grant bluetooth connect so this app can detect devices.");
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @RequiresApi(api = Build.VERSION_CODES.S)
+                public void onDismiss(DialogInterface dialog) {
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                }
+            });
+            builder.show();
+
+        }
+
+    }
+
+
+
 
     /**
      * This method handles the start bluetooth button
@@ -338,8 +365,15 @@ public class MainActivity extends AppCompatActivity {
      */
     public void searchBluetooth(View view) {
         if(mServiceConnected) {
-            Log.d(TAG, "mService is connected and start scanning");
-            mPSoCconnection.scan();
+            Log.d(TAG, "mService is connected ");
+            /* Scan for devices and look for the one with the service that we want */
+
+            if (!hasRequiredRuntimePermissions()) {
+                Log.d(TAG, "add permissions");
+                //requestBluetoothPermissions();
+                requestRelevantRuntimePermissions();
+            } else {
+            mPSoCconnection.scan();}
         }
 
         /* After this we wait for the scan callback to detect that a device has been found */
@@ -395,6 +429,7 @@ public class MainActivity extends AppCompatActivity {
                     // Disable the search button and enable the connect button
                     search_button.setEnabled(false);
                     connect_button.setEnabled(true);
+                    Log.d(TAG, "device found");
                     break;
 
                 case PSoCconnection.ACTION_CONNECTED:
