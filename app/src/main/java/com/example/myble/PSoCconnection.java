@@ -148,30 +148,7 @@ public class PSoCconnection extends Service {
         }
     }
 
-    public void scan2() {
-        Log.d(TAG, "scanning1");
-        UUID capsenseLedService = UUID.fromString(dev_intUUID);
-        UUID[] capsenseLedServiceArray = {capsenseLedService};
 
-        // New BLE scanning introduced in LOLLIPOP
-        ScanSettings settings;
-        List<ScanFilter> filters;
-        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
-        settings = new ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
-                .build();
-        filters = new ArrayList<>();
-        // We will scan just for the CAR's UUID
-        ParcelUuid PUuid = new ParcelUuid(capsenseLedService);
-        ScanFilter filter = new ScanFilter.Builder().setServiceUuid(PUuid).build();
-        filters.add(filter);
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            Log.w(TAG, "required runtime permission not granted");
-            return;
-        }
-        mLEScanner.startScan(null, settings, mScanCallback);
-    }
     /**
      * Scans for BLE devices that support the service we are looking for
      */
@@ -319,17 +296,33 @@ public class PSoCconnection extends Service {
         mBluetoothGatt.readCharacteristic(mred_led_onCharacterisitc);
     }
 
+
+    public void readValueCounter(){
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mBluetoothGatt.readCharacteristic(mcounterCharacteristic);
+    }
     /**
      * This method is used to turn the LED on or off
      *
      * @param value Turns the LED on (1) or off (0)
      */
     public void writeLedCharacteristic(boolean value) {
-        byte[] byteVal = new byte[1];
+        byte[] byteVal = new byte[1]; // initialized to 0
         if (value) {
             byteVal[0] = (byte) (1);
-        } else {
-            byteVal[0] = (byte) (0);
         }
         Log.i(TAG, "LED " + value);
         mLedSwitchState = value;
@@ -364,17 +357,15 @@ public class PSoCconnection extends Service {
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(mred_led_toggleCharacteristic, value);
-        byte[] byteVal = new byte[1];
+        mBluetoothGatt.setCharacteristicNotification(mcounterCharacteristic, value);
+        byte[] byteVal = new byte[1]; // initialized to 0
         if (value) {
             byteVal[0] = 1;
-        } else {
-            byteVal[0] = 0;
         }
         // Write Notification value to the device
         Log.i(TAG, "CapSense Notification " + value);
-        mCapSenseCccd.setValue(byteVal);
-        mBluetoothGatt.writeDescriptor(mCapSenseCccd);
+       mCapSenseCccd.setValue(byteVal);
+       mBluetoothGatt.writeDescriptor(mCapSenseCccd);
     }
 
     /**
@@ -394,7 +385,6 @@ public class PSoCconnection extends Service {
     public String getCapSenseValue() {
         return mCapSenseValue;
     }
-
 
     /**
      * Implements the callback for when scanning for devices has found a device with
@@ -471,7 +461,7 @@ public class PSoCconnection extends Service {
 
             /* Get the CapSense CCCD */
 
-            mCapSenseCccd = mred_led_toggleCharacteristic.getDescriptor(UUID.fromString(CccdUUID));
+            mCapSenseCccd = mcounterCharacteristic.getDescriptor(UUID.fromString(CccdUUID));
 
             // Read the current state of the LED from the device
             readLedCharacteristic();
@@ -501,7 +491,11 @@ public class PSoCconnection extends Service {
                 if (uuid.equalsIgnoreCase(red_led_onCharacteristicUUID)) {
                     final byte[] data = characteristic.getValue();
                     // Set the LED switch state variable based on the characteristic value ttat was read
-                    mLedSwitchState = ((data[0] & 0xff) != 0x00);
+                    mLedSwitchState = (data[0] & 0xff) == 0x00;
+                }
+                if(uuid.equalsIgnoreCase(counterCharacteristicUUID)){
+                    final byte[] data2 = characteristic.getValue();
+                    mCapSenseValue = Byte.toString(data2[0]);
                 }
                 // Notify the main activity that new data is available
                 broadcastUpdate(ACTION_DATA_RECEIVED);
@@ -518,7 +512,7 @@ public class PSoCconnection extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-
+/*
             String uuid = characteristic.getUuid().toString();
 
             // In this case, the only notification the apps gets is the CapSense value.
@@ -526,6 +520,11 @@ public class PSoCconnection extends Service {
             // use a switch statement here to operate on each one separately.
             if (uuid.equalsIgnoreCase(red_led_toggleCharacteristicUUID)) {
                 mCapSenseValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT16, 0).toString();
+            }
+ */         String uuid = characteristic.getUuid().toString();
+            if(uuid.equalsIgnoreCase(counterCharacteristicUUID)){
+                final byte[] data2 = characteristic.getValue();
+                mCapSenseValue = Byte.toString(data2[0]);
             }
 
             // Notify the main activity that new data is available

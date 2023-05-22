@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Paint;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -30,6 +31,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.os.Bundle;
@@ -42,15 +44,18 @@ public class MainActivity extends AppCompatActivity {
 
     // Variables to access objects from the layout such as buttons, switches, values
     private static TextView mCapsenseValue;
+    private static TextView mWeatherValue;
     private static Button start_button;
     private static Button search_button;
     private static Button connect_button;
     private static Button discover_button;
     private static Button disconnect_button;
+    private static Button readValue_button;
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     private static Switch led_switch;
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     private static Switch cap_switch;
+    private static ImageView image_weather;
 
     // Variables to manage BLE connection
     private static boolean mConnectState;
@@ -114,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
      * @param savedInstanceState is any state saved from prior creations of this activity
      */
     //@TargetApi(Build.VERSION_CODES.M) // This is required for Android 6.0 (Marshmallow) to work
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up a variable to point to the CapSense value on the display
         mCapsenseValue = (TextView) findViewById(R.id.capsense_value);
+        mWeatherValue = (TextView) findViewById(R.id.textview);
 
         // Set up variables for accessing buttons and slide switches
         start_button = (Button) findViewById(R.id.start_button);
@@ -128,8 +135,10 @@ public class MainActivity extends AppCompatActivity {
         connect_button = (Button) findViewById(R.id.connect_button);
         discover_button = (Button) findViewById(R.id.discoverSvc_button);
         disconnect_button = (Button) findViewById(R.id.disconnect_button);
+        readValue_button = (Button) findViewById(R.id.button);
         led_switch = (Switch) findViewById(R.id.led_switch);
         cap_switch = (Switch) findViewById(R.id.capsense_switch);
+        image_weather = (ImageView) findViewById(R.id.imageView);
 
         // Initialize service and connection state variable
         mServiceConnected = false;
@@ -166,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
     }
 
 
@@ -417,6 +427,10 @@ public class MainActivity extends AppCompatActivity {
         /* That event broadcasts a message which is picked up by the mGattUpdateReceiver */
     }
 
+
+    public void ReadValue(View view){
+        mPSoCconnection.readValueCounter();
+    }
     /**
      * Listener for BLE event broadcasts
      */
@@ -454,6 +468,7 @@ public class MainActivity extends AppCompatActivity {
                     led_switch.setEnabled(false);
                     cap_switch.setChecked(false);
                     cap_switch.setEnabled(false);
+                    readValue_button.setEnabled(false);
                     mConnectState = false;
                     Log.d(TAG, "Disconnected");
                     break;
@@ -463,6 +478,7 @@ public class MainActivity extends AppCompatActivity {
                     // Enable the LED and CapSense switches
                     led_switch.setEnabled(true);
                     cap_switch.setEnabled(true);
+                    readValue_button.setEnabled(true);
                     Log.d(TAG, "Services Discovered");
                     break;
                 case PSoCconnection.ACTION_DATA_RECEIVED:
@@ -475,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     // Get CapSense Slider Value
                     String CapSensePos = mPSoCconnection.getCapSenseValue();
+                    int capsensevalue = Integer.parseInt(CapSensePos);
                     if (CapSensePos.equals("-1")) {  // No Touch returns 0xFFFF which is -1
                         if(!CapSenseNotifyState) { // Notifications are off
                             mCapsenseValue.setText(R.string.NotifyOff);
@@ -483,6 +500,21 @@ public class MainActivity extends AppCompatActivity {
                         }
                     } else { // Valid CapSense value is returned
                         mCapsenseValue.setText(CapSensePos);
+                    }
+
+
+                    if(!CapSenseNotifyState) { // Notifications are off
+                        mWeatherValue.setText(R.string.NotifyOff);
+                        image_weather.setImageResource(R.drawable.ic_launcher_foreground);
+                    } else if (capsensevalue <= 0){ // Notifications are on but there is no rain
+                        mWeatherValue.setText(R.string.NoRain);
+                        image_weather.setImageResource(R.drawable.wi_day_sunny);
+                    } else if (capsensevalue<50){
+                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"mm/h");
+                        image_weather.setImageResource(R.drawable.wi_rain_mix);
+                    } else { // Valid CapSense value is returned
+                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"mm/h");
+                        image_weather.setImageResource(R.drawable.wi_thunderstorm);
                     }
                 default:
                     break;

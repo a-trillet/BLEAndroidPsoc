@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:layout_width="match_parent"
@@ -110,5 +111,25 @@
             tools:ignore="RelativeOverlap,UseSwitchCompatOrMaterialXml" />
 
     </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="393dp"
+        android:layout_height="321dp"
+        app:srcCompat="@drawable/ic_launcher_foreground" />
+
+    <TextView
+        android:id="@+id/textview"
+        android:layout_width="215dp"
+        android:layout_height="wrap_content"
+        android:text="@string/NotifyOff" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:onClick="ReadValue"
+        android:text="readValue" />
 
 </LinearLayout>
