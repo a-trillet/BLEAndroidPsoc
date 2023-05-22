@@ -164,12 +164,16 @@ public class MainActivity extends AppCompatActivity {
 
         /* This will be called when the CapSense Notify On/Off switch is touched */
         cap_switch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Turn CapSense Notifications on/off based on the state of the switch
                 mPSoCconnection.writeCapSenseNotification(isChecked);
                 CapSenseNotifyState = isChecked;  // Keep track of CapSense notification state
                 if (isChecked) { // Notifications are now on so text has to say "No Touch"
-                    mCapsenseValue.setText(R.string.NoTouch);
+                    mCapsenseValue.setText(R.string.Loading);
+                    mPSoCconnection.readValueCounter();
+
+
                 } else { // Notifications are now off so text has to say "Notify Off"
                     mCapsenseValue.setText(R.string.NotifyOff);
                 }
@@ -430,6 +434,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void ReadValue(View view){
         mPSoCconnection.readValueCounter();
+
+    }
+    public void ReadValue(){
+        mPSoCconnection.readValueCounter();
     }
     /**
      * Listener for BLE event broadcasts
@@ -510,10 +518,10 @@ public class MainActivity extends AppCompatActivity {
                         mWeatherValue.setText(R.string.NoRain);
                         image_weather.setImageResource(R.drawable.wi_day_sunny);
                     } else if (capsensevalue<50){
-                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"mm/h");
+                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"drops / 10s");
                         image_weather.setImageResource(R.drawable.wi_rain_mix);
                     } else { // Valid CapSense value is returned
-                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"mm/h");
+                        mWeatherValue.setText("Rain intensity: "+(CapSensePos)+"drops / 10s");
                         image_weather.setImageResource(R.drawable.wi_thunderstorm);
                     }
                 default:

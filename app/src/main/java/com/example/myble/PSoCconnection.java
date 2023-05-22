@@ -314,6 +314,24 @@ public class PSoCconnection extends Service {
         }
         mBluetoothGatt.readCharacteristic(mcounterCharacteristic);
     }
+
+    public void readValueLed(){
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+        Log.w(TAG, "BluetoothAdapter not initialized");
+        return;
+    }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        // TODO: Consider calling
+        //    ActivityCompat#requestPermissions
+        // here to request the missing permissions, and then overriding
+        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+        //                                          int[] grantResults)
+        // to handle the case where the user grants the permission. See the documentation
+        // for ActivityCompat#requestPermissions for more details.
+        return;
+    }
+        mBluetoothGatt.readCharacteristic(mred_led_onCharacterisitc);
+}
     /**
      * This method is used to turn the LED on or off
      *
@@ -523,8 +541,12 @@ public class PSoCconnection extends Service {
             }
  */         String uuid = characteristic.getUuid().toString();
             if(uuid.equalsIgnoreCase(counterCharacteristicUUID)){
-                final byte[] data2 = characteristic.getValue();
-                mCapSenseValue = Byte.toString(data2[0]);
+                final byte[] data1 = characteristic.getValue();
+                mCapSenseValue = Byte.toString(data1[0]);
+            }
+            if(uuid.equalsIgnoreCase(red_led_onCharacteristicUUID)){
+                final byte[] data3 = characteristic.getValue();
+                mLedSwitchState = (data3[0] & 0xff) == 0x00;
             }
 
             // Notify the main activity that new data is available

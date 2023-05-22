@@ -56,7 +56,7 @@
     <string name="NotifyOff">"Notify Off"</string>
     <string name="Notify">Notify</string>
     <string name="NoRain">No rain</string>
-
+    <string name="Loading">Loading</string>
 
 
 </resources>
